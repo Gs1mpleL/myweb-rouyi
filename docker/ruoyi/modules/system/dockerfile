@@ -12,4 +12,4 @@ WORKDIR /home/ruoyi
 # 复制jar文件到路径
 COPY ./jar/ruoyi-modules-system.jar /home/ruoyi/ruoyi-modules-system.jar
 # 启动系统服务
-ENTRYPOINT ["java", "-Xms10m", "-Xmx10m","-jar","ruoyi-modules-system.jar","--spring.profiles.active=prod"]
+ENTRYPOINT ["java","-jar","ruoyi-modules-system.jar","--spring.profiles.active=prod"]

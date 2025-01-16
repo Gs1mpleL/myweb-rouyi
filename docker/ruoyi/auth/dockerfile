@@ -12,4 +12,4 @@ WORKDIR /home/ruoyi
 # 复制jar文件到路径
 COPY ./jar/ruoyi-auth.jar /home/ruoyi/ruoyi-auth.jar
 # 启动认证服务
-ENTRYPOINT ["java","-jar", "-Xms10m", "-Xmx10m","ruoyi-auth.jar","--spring.profiles.active=prod"]
+ENTRYPOINT ["java","-jar","ruoyi-auth.jar","--spring.profiles.active=prod"]

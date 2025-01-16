@@ -7,7 +7,6 @@ services:
       context: ./nacos
     environment:
       - MODE=standalone
-      - JAVA_OPTIONS=-Xmx64m -Xms64m
     volumes:
       - ./nacos/logs/:/home/nacos/logs
       - ./nacos/conf/application.properties:/home/nacos/conf/application.properties
