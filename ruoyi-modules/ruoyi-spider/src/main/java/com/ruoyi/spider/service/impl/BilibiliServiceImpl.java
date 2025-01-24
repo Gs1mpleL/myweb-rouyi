@@ -25,6 +25,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -43,6 +44,22 @@ public class BilibiliServiceImpl implements BilibiliService {
     HttpUtils httpUtils;
     @Autowired
     private BilibiliMapper bilibiliMapper;
+
+    @Override
+    public void dailyTask() {
+        List<Bilibili> bilibilis = bilibiliMapper.getBilibilis();
+        for (Bilibili bilibili : bilibilis) {
+            refreshCookie(bilibili.getCookie(),bilibili.getRefreshToken());
+            task(bilibili);
+        }
+    }
+
+    void task(Bilibili bilibili){
+        BiliUserData biliUserData = loginByCookie(bilibili.getCookie());
+        log.info("用户{}的DailyTask执行完成",biliUserData.getUname());
+    }
+
+
     @Override
     public BiliUserData loginByCookie(String cookie) {
         String url = "https://api.bilibili.com/x/web-interface/nav";
@@ -75,7 +92,7 @@ public class BilibiliServiceImpl implements BilibiliService {
     }
 
     @Override
-    public String refreshCookie() {
+    public String refreshCookieByCurUser() {
         Bilibili bilibili = bilibiliMapper.getBilibiliByUserId(SecurityContextHolder.getUserId());
         return refreshCookie(bilibili.getCookie(), bilibili.getRefreshToken());
     }
@@ -88,11 +105,9 @@ public class BilibiliServiceImpl implements BilibiliService {
         String s = "null";
         if (isNeedRefresh.getJSONObject("data").getString("refresh").equals("true")) {
             log.info("需要刷新，开始刷新！");
-
+            s = doRefresh(cookie,refreshToken);
         } else {
             log.info("不需要刷新！");
-            s = doRefresh(cookie,refreshToken);
-
         }
         return s;
     }
@@ -151,6 +166,7 @@ public class BilibiliServiceImpl implements BilibiliService {
         log.info(biliUserData.toString());
         return biliUserData;
     }
+
 
     private String genQR() {
         // 二维码生成
