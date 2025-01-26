@@ -23,7 +23,7 @@ public class BlogController {
     @PostMapping
     public R<?> add(@RequestBody Blog blog) {
         blogService.add(blog);
-        return R.ok(blog);
+        return R.ok();
     }
 
     @PutMapping
