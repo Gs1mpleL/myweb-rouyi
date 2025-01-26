@@ -15,14 +15,16 @@ import java.util.Map;
 public class PushServiceImpl implements PushService {
     @Autowired
     HttpUtils  httpUtils;
+    @Autowired
+    PushMsg pushMsgContext;
     @Override
     public boolean push(PushMsg pushMsg) {
         String baseUrl = "https://api.day.app/push";
         Map<String, String> params = new HashMap<>();
         params.put("title", pushMsg.getTitle());
         params.put("body", pushMsg.getBody());
-        params.put("device_key", pushMsg.getDevice_key());
-        params.put("icon", pushMsg.getIcon());
+        params.put("device_key", (pushMsg.getDevice_key() == null|| pushMsg.getDevice_key().isEmpty())? pushMsgContext.getDevice_key(): pushMsg.getDevice_key());
+        params.put("icon", (pushMsg.getIcon() == null|| pushMsg.getIcon().isEmpty())? pushMsgContext.getIcon(): pushMsg.getIcon());
         params.put("group", pushMsg.getGroup());
         params.put("url", pushMsg.getUrl());
         JSONObject req = httpUtils.post(baseUrl, null, params, JSONObject.class);
