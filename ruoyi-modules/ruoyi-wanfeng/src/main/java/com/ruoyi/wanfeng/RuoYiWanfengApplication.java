@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * @author ruoyi
  */
-@SpringBootApplication()
+@SpringBootApplication
 @EnableCustomConfig
 @EnableRyFeignClients
 public class RuoYiWanfengApplication {
