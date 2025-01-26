@@ -1,6 +1,6 @@
 package com.ruoyi.job.task;
 
-import com.ruoyi.system.api.RemoteSpiderService;
+import com.ruoyi.system.api.RemoteWanfengService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.ruoyi.common.core.utils.StringUtils;
@@ -14,7 +14,7 @@ import com.ruoyi.common.core.utils.StringUtils;
 public class RyTask
 {
     @Autowired
-    RemoteSpiderService remoteSpiderService;
+    RemoteWanfengService remoteWanfengService;
 
     public void ryMultipleParams(String s, Boolean b, Long l, Double d, Integer i)
     {
@@ -31,7 +31,7 @@ public class RyTask
         System.out.println("执行无参方法");
     }
     public void bilibiliTask(){
-        remoteSpiderService.dailyTask();
+        remoteWanfengService.dailyTask();
     }
 
 

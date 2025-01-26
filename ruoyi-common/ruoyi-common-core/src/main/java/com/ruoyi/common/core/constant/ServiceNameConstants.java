@@ -22,7 +22,7 @@ public class ServiceNameConstants
      */
     public static final String FILE_SERVICE = "ruoyi-file";
     /**
-     * 爬虫服务的serviceid
+     * wanfeng的serviceid
      */
-    public static final String SPIDER_SERVICE = "ruoyi-spider";
+    public static final String SPIDER_SERVICE = "ruoyi-wanfeng";
 }
