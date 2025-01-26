@@ -1,5 +1,6 @@
 package com.ruoyi.job.task;
 
+import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.system.api.RemoteWanfengService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class RyTask
         System.out.println("执行无参方法");
     }
     public void bilibiliTask(){
-        remoteWanfengService.dailyTask();
+        remoteWanfengService.dailyTask(SecurityConstants.INNER);
     }
 
 
