@@ -2,7 +2,7 @@ package com.ruoyi.common.core.constant;
 
 /**
  * 服务名称
- * 
+ *
  * @author ruoyi
  */
 public class ServiceNameConstants
@@ -21,4 +21,8 @@ public class ServiceNameConstants
      * 文件服务的serviceid
      */
     public static final String FILE_SERVICE = "ruoyi-file";
+    /**
+     * wanfeng的serviceid
+     */
+    public static final String SPIDER_SERVICE = "ruoyi-wanfeng";
 }

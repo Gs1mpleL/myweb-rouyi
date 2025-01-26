@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.wanfeng.mapper.BlogMapper">
+
+    <resultMap type="Blog" id="BlogResult">
+        <id property="blogId" column="blog_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="author" column="author"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <!-- 添加博客 -->
+    <insert id="add" parameterType="Blog">
+        INSERT INTO learn_blog (
+        title,
+        content,
+        category_id,
+        author,
+        del_flag,
+        create_time,
+        update_time
+        ) VALUES (
+        #{title},
+        #{content},
+        #{categoryId},
+        #{author},
+        '0',
+        <!-- 如果 createTime 为空，则使用数据库的当前时间函数 -->
+        <if test="createTime != null">
+            #{createTime}
+        </if>
+        <if test="createTime == null">
+            NOW()
+        </if>,
+        <!-- 如果 updateTime 为空，则使用数据库的当前时间函数 -->
+        <if test="updateTime != null">
+            #{updateTime}
+        </if>
+        <if test="updateTime == null">
+            NOW()
+        </if>
+        )
+    </insert>
+    <insert id="addCategory" parameterType="BlogCategory" keyProperty="id">
+        <selectKey keyProperty="categoryId" order="AFTER" resultType="java.lang.Long">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        INSERT INTO learn_blog_category (
+        category_name,
+        create_time,
+        update_time,
+        del_flag
+        ) VALUES (
+        #{categoryName},
+        <if test="createTime != null">
+            #{createTime}
+        </if>
+        <if test="createTime == null">
+            NOW()
+        </if>,
+        <if test="updateTime != null">
+            #{updateTime}
+        </if>
+        <if test="updateTime == null">
+            NOW()
+        </if>,
+
+        <if test="delFlag != null">
+            #{delFlag}
+        </if>
+        <if test="delFlag == null">
+            '0'
+        </if>
+        )
+    </insert>
+
+    <!-- 更新博客，只更新有变更的字段 -->
+    <update id="update" parameterType="Blog">
+        UPDATE learn_blog
+        <set>
+            <if test="title != null">
+                title = #{title},
+            </if>
+            <if test="content != null">
+                content = #{content},
+            </if>
+            <if test="categoryId != null">
+                category_id = #{categoryId},
+            </if>
+            <if test="author != null">
+                author = #{author},
+            </if>
+            <if test="createTime != null">
+                create_time = #{createTime},
+            </if>
+            <if test="createTime == null">
+                create_time = NOW(),
+            </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime},
+            </if>
+            <if test="updateTime == null">
+                update_time = NOW(),
+            </if>
+        </set>
+        WHERE
+        blog_id = #{blogId}
+    </update>
+
+    <!-- 删除博客（逻辑删除，将 del_flag 置为 1） -->
+    <update id="deleteBlogById" parameterType="java.lang.Long">
+        UPDATE learn_blog
+        SET
+            del_flag = '1'
+        WHERE
+            blog_id = #{blogId}
+    </update>
+
+    <!-- 根据博客 ID 查询单个博客 -->
+    <select id="selectBlogById" resultMap="BlogResult" parameterType="java.lang.Long">
+        SELECT
+            lb.blog_id,
+            lb.title,
+            lb.content,
+            lb.category_id,
+            lb.author,
+            lb.del_flag,
+            lb.create_time,
+            lb.update_time,
+            lbc.category_name
+        FROM
+            learn_blog lb
+                LEFT JOIN
+            learn_blog_category lbc ON lb.category_id = lbc.category_id
+        WHERE
+            lb.blog_id = #{blogId}
+          AND lb.del_flag = '0'
+    </select>
+
+    <select id="getBlogList" resultMap="BlogResult">
+        -- 查询有博客的分类信息
+        SELECT
+            lb.blog_id,
+            lb.title,
+            lb.content,
+            lb.category_id,
+            lb.author,
+            lb.del_flag,
+            lb.create_time,
+            lb.update_time,
+            lbc.category_name
+        FROM
+            learn_blog lb
+                RIGHT JOIN
+            learn_blog_category lbc ON lb.category_id = lbc.category_id
+        WHERE
+            lb.del_flag = '0' OR lb.del_flag IS NULL
+        UNION
+        -- 查询没有博客的分类信息，博客相关字段置为 NULL
+        SELECT
+            NULL AS blog_id,
+            NULL AS title,
+            NULL AS content,
+            lbc.category_id,
+            NULL AS author,
+            NULL AS del_flag,
+            NULL AS create_time,
+            NULL AS update_time,
+            lbc.category_name
+        FROM
+            learn_blog_category lbc
+        WHERE
+            lbc.category_id NOT IN (SELECT DISTINCT category_id FROM learn_blog WHERE del_flag = '0')
+    </select>
+
+</mapper>
