@@ -208,7 +208,7 @@ export default {
 
         handleChange(value, render) {
             this.blogForm.content = value
-            if(!this.isReseting){
+            if(!this.isReseting && !this.isEditing){
                 this.saveToLocalStorage()
             }
             this.isReseting = false
