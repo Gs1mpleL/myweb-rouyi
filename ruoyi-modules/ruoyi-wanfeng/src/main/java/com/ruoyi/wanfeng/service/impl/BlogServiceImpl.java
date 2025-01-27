@@ -6,6 +6,7 @@ import com.ruoyi.wanfeng.mapper.BlogMapper;
 import com.ruoyi.wanfeng.service.BlogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class BlogServiceImpl implements BlogService {
         return blogMapper.getBlogList();
     }
 
+    @Transactional
     @Override
     public void add(Blog blog) {
         if (blog.getCategoryId()==null){
