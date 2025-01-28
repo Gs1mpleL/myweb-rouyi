@@ -20,7 +20,7 @@ public class BlogServiceImpl implements BlogService {
         return blogMapper.getBlogList();
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void add(Blog blog) {
         if (blog.getCategoryId()==null){
