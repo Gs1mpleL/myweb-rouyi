@@ -65,6 +65,7 @@
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
+                    <el-button type="danger" @click="clearDraftAndReset">清除缓存</el-button>
                     <el-button @click="handleClose">取 消</el-button>
                     <el-button type="primary" @click="handleSave">保 存</el-button>
                 </div>
@@ -382,7 +383,14 @@ export default {
             } else {
                 this.blogForm.categoryId = null
             }
-        }
+        },
+
+        // 清除当前缓存并重置表单
+        clearDraftAndReset() {
+            localStorage.removeItem('blogDraft'); // 清除草稿缓存
+            this.resetForm(); // 重置表单
+            this.$message.success('草稿已清除，表单已重置');
+        },
     }
 }
 </script>
