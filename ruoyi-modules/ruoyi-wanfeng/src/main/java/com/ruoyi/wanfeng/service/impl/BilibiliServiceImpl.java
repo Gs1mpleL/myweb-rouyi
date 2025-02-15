@@ -2,13 +2,9 @@ package com.ruoyi.wanfeng.service.impl;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.MultiFormatWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.ruoyi.common.core.context.SecurityContextHolder;
 import com.ruoyi.common.core.exception.GlobalException;
+import com.ruoyi.common.redis.service.RedisService;
 import com.ruoyi.wanfeng.domain.Bilibili;
 import com.ruoyi.wanfeng.mapper.BilibiliMapper;
 import com.ruoyi.wanfeng.service.BilibiliService;
@@ -21,12 +17,8 @@ import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -43,6 +35,8 @@ public class BilibiliServiceImpl implements BilibiliService {
     HttpUtils httpUtils;
     @Autowired
     private BilibiliMapper bilibiliMapper;
+    @Autowired
+    private RedisService redisService;
 
     private static String getRefreshCsrf(String html) {
         try {
@@ -64,6 +58,15 @@ public class BilibiliServiceImpl implements BilibiliService {
         }
     }
 
+    @Override
+    public BiliUserData getBilibiliInfo() {
+        Bilibili bilibiliByUserId = bilibiliMapper.getBilibiliByUserId(SecurityContextHolder.getUserId());
+        if (bilibiliByUserId == null) {
+            return null;
+        }
+        return loginByCookie(bilibiliByUserId.getCookie());
+    }
+
     void task(Bilibili bilibili) {
         BiliUserData biliUserData = loginByCookie(bilibili.getCookie());
         log.info("用户{}的DailyTask执行完成", biliUserData.getUname());
@@ -73,6 +76,7 @@ public class BilibiliServiceImpl implements BilibiliService {
     public BiliUserData loginByCookie(String cookie) {
         String url = "https://api.bilibili.com/x/web-interface/nav";
         HashMap<String, String> header = new HashMap<>();
+        cookie = cookie.replaceAll("\n","");
         header.put("Cookie", cookie);
         JSONObject jsonObject = httpUtils.get(url, header, null, null, JSONObject.class);
         JSONObject object = jsonObject.getJSONObject("data");
@@ -122,9 +126,7 @@ public class BilibiliServiceImpl implements BilibiliService {
     }
 
     @Override
-    public BiliUserData loginByQR() {
-        String qrcode_key = genQR();
-
+    public BiliUserData loginByQR(String qrcode_key) {
         // 等待扫码登陆
         AtomicReference<String> cookie = new AtomicReference<>("");
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -176,32 +178,41 @@ public class BilibiliServiceImpl implements BilibiliService {
         return biliUserData;
     }
 
-    private String genQR() {
+//    private String genQR() {
+//        // 二维码生成
+//        JSONObject jsonObject = httpUtils.get("https://passport.bilibili.com/x/passport-login/web/qrcode/generate", null, null, JSONObject.class);
+//        String url = jsonObject.getJSONObject("da   ta").getString("url");
+//        String qrcode_key = jsonObject.getJSONObject("data").getString("qrcode_key");
+//        int width = 300; // 二维码宽度
+//        int height = 300; // 二维码高度
+//        String format = "png"; // 图像格式
+//        Map<EncodeHintType, Object> hints = new HashMap<>();
+//        hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+//        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+//        hints.put(EncodeHintType.MARGIN, 2);
+//        try {
+//            BitMatrix bitMatrix = new MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, width, height, hints);
+//            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+//            for (int x = 0; x < width; x++) {
+//                for (int y = 0; y < height; y++) {
+//                    image.setRGB(x, y, bitMatrix.get(x, y) ? 0xFF000000 : 0xFFFFFFFF);
+//                }
+//            }
+//            File qrFile = new File("qrcode.png");
+//            ImageIO.write(image, format, qrFile);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        return qrcode_key;
+//    }
+
+    public String genQR() {
         // 二维码生成
         JSONObject jsonObject = httpUtils.get("https://passport.bilibili.com/x/passport-login/web/qrcode/generate", null, null, JSONObject.class);
         String url = jsonObject.getJSONObject("data").getString("url");
         String qrcode_key = jsonObject.getJSONObject("data").getString("qrcode_key");
-        int width = 300; // 二维码宽度
-        int height = 300; // 二维码高度
-        String format = "png"; // 图像格式
-        Map<EncodeHintType, Object> hints = new HashMap<>();
-        hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
-        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
-        hints.put(EncodeHintType.MARGIN, 2);
-        try {
-            BitMatrix bitMatrix = new MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, width, height, hints);
-            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    image.setRGB(x, y, bitMatrix.get(x, y) ? 0xFF000000 : 0xFFFFFFFF);
-                }
-            }
-            File qrFile = new File("qrcode.png");
-            ImageIO.write(image, format, qrFile);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return qrcode_key;
+        return url + "|spilt|" + qrcode_key;
     }
 
     private String getCookieFromRespHeader(JSONObject jsonObject1) {
