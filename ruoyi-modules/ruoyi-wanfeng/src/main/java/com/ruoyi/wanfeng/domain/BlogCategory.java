@@ -7,7 +7,7 @@ import lombok.Data;
 public class BlogCategory extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
-    private Long categoryId;
+    private Long id;
 
     private String categoryName;
 

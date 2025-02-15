@@ -2,25 +2,33 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.wanfeng.mapper.BlogMapper">
 
-    <resultMap type="Blog" id="BlogResult">
-        <id property="blogId" column="blog_id"/>
+    <resultMap type="BlogVo" id="BlogResult">
+        <id property="blogId" column="id"/>
+        <id property="userId" column="user_id"/>
+        <result property="categoryId" column="category_id"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
-        <result property="categoryId" column="category_id"/>
-        <result property="author" column="author"/>
         <result property="delFlag" column="del_flag"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
+        <result property="author" column="nick_name"/>
         <result property="categoryName" column="category_name"/>
     </resultMap>
-
+    <resultMap type="Blog" id="Blog">
+        <id property="blogId" column="id"/>
+        <result property="title" column="title"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="content" column="content"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
     <!-- 添加博客 -->
-    <insert id="add" parameterType="Blog">
+    <insert id="add" parameterType="BlogVo">
         INSERT INTO learn_blog (
         title,
         content,
         category_id,
-        author,
+        user_id,
         del_flag,
         create_time,
         update_time
@@ -28,7 +36,7 @@
         #{title},
         #{content},
         #{categoryId},
-        #{author},
+        #{userId},
         '0',
         <!-- 如果 createTime 为空，则使用数据库的当前时间函数 -->
         <if test="createTime != null">
@@ -46,10 +54,7 @@
         </if>
         )
     </insert>
-    <insert id="addCategory" parameterType="BlogCategory" keyProperty="id">
-        <selectKey keyProperty="categoryId" order="AFTER" resultType="java.lang.Long">
-            SELECT LAST_INSERT_ID()
-        </selectKey>
+    <insert id="addCategory" parameterType="BlogCategory"  useGeneratedKeys="true" keyProperty="id">
         INSERT INTO learn_blog_category (
         category_name,
         create_time,
@@ -80,7 +85,7 @@
     </insert>
 
     <!-- 更新博客，只更新有变更的字段 -->
-    <update id="update" parameterType="Blog">
+    <update id="update" parameterType="BlogVo">
         UPDATE learn_blog
         <set>
             <if test="title != null">
@@ -92,24 +97,12 @@
             <if test="categoryId != null">
                 category_id = #{categoryId},
             </if>
-            <if test="author != null">
-                author = #{author},
-            </if>
-            <if test="createTime != null">
-                create_time = #{createTime},
-            </if>
-            <if test="createTime == null">
-                create_time = NOW(),
-            </if>
-            <if test="updateTime != null">
-                update_time = #{updateTime},
-            </if>
             <if test="updateTime == null">
                 update_time = NOW(),
             </if>
         </set>
         WHERE
-        blog_id = #{blogId}
+        id = #{blogId}
     </update>
 
     <!-- 删除博客（逻辑删除，将 del_flag 置为 1） -->
@@ -141,41 +134,54 @@
             lb.blog_id = #{blogId}
           AND lb.del_flag = '0'
     </select>
-
-    <select id="getBlogList" resultMap="BlogResult">
-        -- 查询有博客的分类信息
+<!--    错误示范，WHERE写在右连接外边，会导致最后为null的被剔除-->
+<!--    <select id="listByUserId" resultMap="BlogResult">-->
+<!--        SELECT-->
+<!--            lb.id,-->
+<!--            lb.title,-->
+<!--            lb.user_id,-->
+<!--            lb.category_id,-->
+<!--            lb.create_time,-->
+<!--            lb.update_time,-->
+<!--            lbc.category_name,-->
+<!--            lu.nick_name-->
+<!--        FROM learn_blog lb-->
+<!--                 Left join sys_user lu on lb.user_id = lu.user_id-->
+<!--                 Right join learn_blog_category lbc on lb.category_id = lbc.id-->
+<!--        WHERE lb.del_flag = 0 AND lb.user_id = #{userId}-->
+<!--    </select>-->
+<!--    这里是正确处理，或者直接把分类表当做主表来操作，更好理解-->
+    <select id="listByUserId" resultMap="BlogResult">
         SELECT
-            lb.blog_id,
+            lb.id,
             lb.title,
-            lb.content,
-            lb.category_id,
-            lb.author,
-            lb.del_flag,
+            lb.user_id,
+            -- 使用 COALESCE 函数，如果 lb.category_id 为空则返回 lbc.id
+            COALESCE(lb.category_id, lbc.id) as category_id,
             lb.create_time,
             lb.update_time,
-            lbc.category_name
-        FROM
-            learn_blog lb
-                RIGHT JOIN
-            learn_blog_category lbc ON lb.category_id = lbc.category_id
-        WHERE
-            lb.del_flag = '0' OR lb.del_flag IS NULL
-        UNION
-        -- 查询没有博客的分类信息，博客相关字段置为 NULL
+            lbc.category_name,
+            lbc.id,
+            lu.nick_name
+        FROM learn_blog lb
+                 -- 右连接博客分类表，关联博客分类信息
+                 RIGHT JOIN learn_blog_category lbc ON lb.category_id = lbc.id AND lb.user_id = #{userId} AND lb.del_flag = 0
+            -- 左连接用户表，获取博客所属用户的昵称
+                 LEFT JOIN sys_user lu ON lb.user_id = lu.user_id
+    </select>
+    <select id="selectById" resultMap="Blog" parameterType="java.lang.Long">
         SELECT
-            NULL AS blog_id,
-            NULL AS title,
-            NULL AS content,
-            lbc.category_id,
-            NULL AS author,
-            NULL AS del_flag,
-            NULL AS create_time,
-            NULL AS update_time,
-            lbc.category_name
-        FROM
-            learn_blog_category lbc
-        WHERE
-            lbc.category_id NOT IN (SELECT DISTINCT category_id FROM learn_blog WHERE del_flag = '0')
+            lb.id,
+            lb.title,
+            lb.category_id,
+            lb.content,
+            lb.create_time,
+            lb.update_time
+        FROM learn_blog lb
+        WHERE lb.id = #{id}
+    </select>
+    <select id="countByTitle" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM learn_blog WHERE title = #{title}
     </select>
 
 </mapper>

@@ -33,3 +33,11 @@ export function delBlog(blogId) {
     method: 'delete'
   })
 }
+
+// 查询单条博客
+export function getOne(blogId) {
+  return request({
+    url: '/wanfeng/learn/blog/' + blogId,
+    method: 'get'
+  })
+}

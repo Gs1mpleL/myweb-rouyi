@@ -9,7 +9,7 @@
                         写博客
                     </el-button>
                 </div>
-                <el-tree :data="categoryList" :props="defaultProps" @node-click="handleNodeClick"
+                <el-tree :data="TreeData" :props="defaultProps" @node-click="handleNodeClick"
                     :highlight-current="true">
                     <span class="custom-tree-node" slot-scope="{ node, data }">
                         <span>{{ node.label }}</span>
@@ -44,7 +44,7 @@
                 <el-empty description="请选择要查看的博客"></el-empty>
             </div>
 
-            <!-- 添加 Markdown 编辑器弹窗 -->
+            <!-- Markdown 编辑器弹窗 -->
             <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="90%" :before-close="handleClose"
                 :close-on-click-modal="false" fullscreen>
                 <el-form :model="blogForm" ref="blogForm" :rules="rules" label-width="80px">
@@ -60,12 +60,10 @@
                         </el-select>
                     </el-form-item>
                     <el-form-item label="内容" prop="content">
-                        <mavon-editor v-model="blogForm.content" :toolbars="markdownOption" @save="handleSave"
-                            @change="handleChange" style="height: 500px;" />
+                        <mavon-editor v-model="blogForm.content" :toolbars="markdownOption" @save="handleSave" style="height: 500px;" />
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
-                    <el-button type="danger" @click="clearDraftAndReset">清除缓存</el-button>
                     <el-button @click="handleClose">取 消</el-button>
                     <el-button type="primary" @click="handleSave">保 存</el-button>
                 </div>
@@ -75,7 +73,7 @@
 </template>
 
 <script>
-import { listBlog, addBlog, updateBlog, delBlog } from '@/api/wanfeng/learn/blog'
+import { listBlog, addBlog, updateBlog, delBlog, getOne } from '@/api/wanfeng/learn/blog'
 import { mavonEditor } from 'mavon-editor'
 import MarkdownIt from 'markdown-it/dist/markdown-it.js'
 import 'mavon-editor/dist/css/index.css'
@@ -88,18 +86,16 @@ export default {
     },
     data() {
         return {
-            isReseting:false,
-            categoryList: [],
+            originData:null,
+            dialogTitle: "",
+            dialogVisible:false,
+            isEditing:false,
+            TreeData: [],
             defaultProps: {
                 children: 'children',
                 label: 'label'
             },
             currentBlog: null,
-
-            // 添加编辑器相关的数据
-            dialogVisible: false,
-            dialogTitle: '',
-            isEditing: false,
             blogForm: {
                 blogId: undefined,
                 title: '',
@@ -158,9 +154,11 @@ export default {
         getList() {
             return listBlog().then(response => {
                 if (response.code === 200) {
-                    this.categoryList = this.handleTreeData(response.data)
+                    this.originData= response.data
+                    this.TreeData = this.handleTreeData(response.data)
+                    console.log(this.TreeData)
                     this.getCategories()
-                    return response.data  // 返回数据以支持链式调用
+                    return response.data
                 } else {
                     this.$message.error('获取博客列表失败')
                 }
@@ -195,25 +193,20 @@ export default {
         // 处理点击博客列表项
         handleNodeClick(data) {
             if (!data.children) {
-                this.currentBlog = data
+                getOne(data.blogId).then(response=>{
+                    data.content = response.data.content
+                    this.currentBlog = data
+                })
             }
         },
         // 处理新建博客
         handleCreate() {
-            this.dialogTitle = '写博客'
+            this.dialogTitle = "写博客"
             this.dialogVisible = true
             this.getCategories()
             this.resetForm()
-            this.restoreFromLocalStorage()
         },
 
-        handleChange(value, render) {
-            this.blogForm.content = value
-            if(!this.isReseting && !this.isEditing){
-                this.saveToLocalStorage()
-            }
-            this.isReseting = false
-        },
 
         handleSave() {
             this.$refs.blogForm.validate(valid => {
@@ -221,9 +214,8 @@ export default {
                     const blogData = {
                         title: this.blogForm.title,
                         content: this.blogForm.content,
-                        categoryName: this.blogForm.categoryName,
-                        author: this.$store.getters.name,
-                        categoryId: this.blogForm.categoryId // 传递分类ID
+                        categoryId: this.blogForm.categoryId, // 传递分类ID
+                        categoryName:this.blogForm.categoryName
                     };
 
                     if (this.isEditing) {
@@ -237,13 +229,15 @@ export default {
                         this.getList().then(() => {
                             // 查找对应的文章
                             const updatedBlog = this.findBlogInList(blogData.title, blogData.categoryName);
+                            console.log(updateBlog)
                             if (updatedBlog) {
-                                this.currentBlog = updatedBlog; // 设置为当前博客
+                                getOne(updatedBlog.blogId).then(response=>{
+                                    updatedBlog.content = response.data.content
+                                    
+                                    this.currentBlog = updatedBlog
+                                })
                             }
                         });
-                        if (!this.isEditing) {
-                            localStorage.removeItem('blogDraft'); // 清除草稿
-                        }
                         this.dialogVisible = false; // 关闭弹出框
                         this.isEditing = false;
                     });
@@ -254,7 +248,7 @@ export default {
         },
 
         findBlogInList(title, categoryName) {
-            return this.categoryList.flatMap(category => category.children || []).find(blog =>
+            return this.TreeData.flatMap(category => category.children || []).find(blog =>
                 blog.title === title && blog.categoryName === categoryName
             );
         },
@@ -267,7 +261,7 @@ export default {
                         cancelButtonText: '取消',
                         type: 'warning'
                     }).then(() => {
-                        this.saveToLocalStorage(); // 保存当前表单内容到草稿
+
                         this.resetForm();
                         this.dialogVisible = false; // 关闭弹出框
                     }).catch(() => {
@@ -284,51 +278,15 @@ export default {
             }
         },
 
-        saveToLocalStorage() {
-            const draft = {
-                title: this.blogForm.title,
-                content: this.blogForm.content,
-                author: this.$store.getters.name,
-                categoryName: this.blogForm.categoryName,
-                timestamp: new Date().getTime()
-            };
-            // 检查是否是自定义分类
-            const selectedCategory = this.existingCategories.find(category => category.name === this.blogForm.categoryName);
-            if (selectedCategory) {
-                draft.categoryId = selectedCategory.id; // 存储对应的分类ID
-            } else {
-                draft.categoryId = null; // 自定义分类，不存储ID
-            }
-            console.log("draft存储",draft)
-            localStorage.setItem('blogDraft', JSON.stringify(draft));
-        },
-
-        restoreFromLocalStorage() {
-            const draft = localStorage.getItem('blogDraft');
-            console.log("draft恢复",draft)
-            if (draft) {
-                const data = JSON.parse(draft);
-                this.blogForm.title = data.title || '';
-                this.blogForm.categoryName = data.categoryName || '';
-                this.blogForm.content = data.content || '';
-                this.blogForm.categoryId = data.categoryId || null;
-                // 提示用户草稿内容已被恢复
-                this.$message({
-                    message: '草稿内容已恢复',
-                    type: 'info'
-                });
-            }
-        },
-
         // 处理修改按钮点击
         handleEdit() {
             this.isEditing = true;
+            this.dialogTitle = "编辑博客";
             this.blogForm.blogId = this.currentBlog.blogId;
             this.blogForm.title = this.currentBlog.title;
             this.blogForm.categoryName = this.currentBlog.categoryName;
             this.blogForm.content = this.currentBlog.content;
             this.blogForm.categoryId = this.currentBlog.categoryId;
-            this.blogForm.author = this.currentBlog.author;
             this.dialogVisible = true;
         },
 
@@ -349,9 +307,8 @@ export default {
 
         // 重置表单
         resetForm() {
-            this.isReseting = true
             this.blogForm = {
-                blogId: undefined,
+                blogId: null,
                 title: '',
                 categoryName: '',
                 content: '',
@@ -359,20 +316,34 @@ export default {
             };
         },
 
-        // 获取所有现有分类
+        // 获取所有现有分类,用于在表单中选择不同的分类
         getCategories() {
-            const categories = []
-            this.categoryList.forEach(category => {
-                category.children.forEach(blog => {
+            const categories = [];
+            this.TreeData.forEach(data => {
+                data.children.forEach(blog => {
                     if (!categories.some(c => c.id === blog.categoryId)) {
                         categories.push({
                             id: blog.categoryId,
                             name: blog.categoryName
-                        })
+                        });
                     }
-                })
-            })
-            this.existingCategories = categories
+                });
+            });
+
+            // 从 originData 中获取分类名称和分类ID
+            const additionalCategories = [...new Set(this.originData.map(item => ({
+                id: item.categoryId,
+                name: item.categoryName
+            })))];
+
+            // 合并两个分类数组
+            additionalCategories.forEach(category => {
+                if (!categories.some(c => c.id === category.id)) {
+                    categories.push(category);
+                }
+            });
+
+            this.existingCategories = categories;
         },
 
         // 处理分类选择框变化事件
@@ -383,13 +354,6 @@ export default {
             } else {
                 this.blogForm.categoryId = null
             }
-        },
-
-        // 清除当前缓存并重置表单
-        clearDraftAndReset() {
-            localStorage.removeItem('blogDraft'); // 清除草稿缓存
-            this.resetForm(); // 重置表单
-            this.$message.success('草稿已清除，表单已重置');
         },
     }
 }
