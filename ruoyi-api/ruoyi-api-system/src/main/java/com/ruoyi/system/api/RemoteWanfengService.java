@@ -21,6 +21,6 @@ public interface RemoteWanfengService
      *
      * @return 结果
      */
-    @GetMapping(value = "/bilibili/dailyTask")
+    @GetMapping(value = "/spider/bilibili/dailyTask")
     public R<?> dailyTask(@RequestHeader(SecurityConstants.FROM_SOURCE) String source);
 }
