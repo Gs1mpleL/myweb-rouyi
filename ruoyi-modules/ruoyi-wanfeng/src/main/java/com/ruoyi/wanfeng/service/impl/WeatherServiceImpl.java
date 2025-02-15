@@ -2,6 +2,8 @@ package com.ruoyi.wanfeng.service.impl;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.ruoyi.common.core.context.SecurityContextHolder;
+import com.ruoyi.wanfeng.domain.Weather;
 import com.ruoyi.wanfeng.dto.Location;
 import com.ruoyi.wanfeng.dto.PushMsg;
 import com.ruoyi.wanfeng.service.PushService;
@@ -23,20 +25,43 @@ public class WeatherServiceImpl implements WeatherService {
     @Autowired
     PushService pushService;
     @Override
-    public void getCurWeather(Location location) {
+    public Weather getCurWeather(Location location) {
         String url = "https://devapi.qweather.com/v7/grid-weather/3d?location=" + location.toString();
         HashMap<String, String> header = new HashMap<>();
         header.put("X-QW-Api-Key","a8b95c42dbf74de1b0756c548af52a4e");
         String json = httpUtils.get(url, header, null, null, String.class);
         JSONObject parse = JSONObject.parseObject(json);
-        String weatherReport = getWeatherReport(parse);
-        if (!weatherReport.equals("")){
-            PushMsg pushMsg = new PushMsg();
-            pushMsg.setBody(weatherReport);
-            pushMsg.setGroup("weather");
-            pushMsg.setTitle("天气预报");
-            pushService.push(pushMsg);
+        JSONArray dailyArray = parse.getJSONArray("daily");
+
+        // 获取执行当天的日期
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        Weather weather = null;
+        for (int i = 0; i < dailyArray.size(); i++) {
+            JSONObject dailyObj = dailyArray.getJSONObject(i);
+            String fxDateStr = dailyObj.getString("fxDate");
+            LocalDate fxDate = LocalDate.parse(fxDateStr, formatter);
+
+            if (fxDate.isEqual(today)) {
+                weather = new Weather();
+                weather.setTextDay(dailyObj.getString("textDay"));
+                weather.setTempMax(dailyObj.getString("tempMax"));
+                weather.setTempMin(dailyObj.getString("tempMin"));
+                break;
+            }
         }
+        if(SecurityContextHolder.getUserId() == 100 || SecurityContextHolder.getUserId() == 1){
+            String weatherReport = getWeatherReport(parse);
+            if (!weatherReport.equals("")){
+                PushMsg pushMsg = new PushMsg();
+                pushMsg.setBody(weatherReport);
+                pushMsg.setGroup("weather");
+                pushMsg.setTitle("天气预报");
+                pushService.push(pushMsg);
+            }
+        }
+        return weather;
     }
 
     public static String getWeatherReport(JSONObject weatherData) {

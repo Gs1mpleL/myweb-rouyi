@@ -1,7 +1,8 @@
 package com.ruoyi.wanfeng.service;
 
+import com.ruoyi.wanfeng.domain.Weather;
 import com.ruoyi.wanfeng.dto.Location;
 
 public interface WeatherService {
-    void getCurWeather(Location location);
+    Weather getCurWeather(Location location);
 }
