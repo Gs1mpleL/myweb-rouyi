@@ -39,3 +39,7 @@ cp ../ruoyi-modules/ruoyi-job/target/ruoyi-modules-job.jar ./ruoyi/modules/job/j
 echo "begin copy ruoyi-modules-gen "
 cp ../ruoyi-modules/ruoyi-gen/target/ruoyi-modules-gen.jar ./ruoyi/modules/gen/jar
 
+
+echo "begin copy ruoyi-modules-wanfeng "
+cp ../ruoyi-modules/ruoyi-wanfeng/target/ruoyi-modules-wanfeng.jar ./ruoyi/modules/wanfeng/jar
+

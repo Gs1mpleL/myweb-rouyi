@@ -33,7 +33,10 @@ base(){
 modules(){
 	docker-compose up -d ruoyi-nacos ruoyi-nginx ruoyi-gateway ruoyi-auth ruoyi-modules-system ruoyi-modules-file ruoyi-modules-gen ruoyi-modules-job ruoyi-visual-monitor
 }
-
+# 启动程序模块（必须）
+dev(){
+	docker-compose up -d ruoyi-nacos ruoyi-nginx ruoyi-gateway ruoyi-auth ruoyi-modules-system ruoyi-modules-wanfeng
+}
 # 关闭所有环境/模块
 stop(){
 	docker-compose stop
@@ -51,6 +54,9 @@ case "$1" in
 ;;
 "base")
 	base
+;;
+"dev")
+	dev
 ;;
 "modules")
 	modules
