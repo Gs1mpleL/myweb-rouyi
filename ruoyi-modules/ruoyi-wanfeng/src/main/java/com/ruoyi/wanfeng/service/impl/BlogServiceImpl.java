@@ -9,6 +9,7 @@ import com.ruoyi.wanfeng.service.BlogService;
 import com.ruoyi.wanfeng.vo.BlogVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class BlogServiceImpl implements BlogService {
         return blogMapper.listByUserId(SecurityContextHolder.getUserId());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void add(BlogVo blogVo) {
         // 检查标题是否重复
