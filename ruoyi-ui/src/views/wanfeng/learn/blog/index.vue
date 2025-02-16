@@ -38,7 +38,12 @@
                         <span>分类：{{ currentBlog.categoryName }}</span>
                     </div>
                 </div>
+                <div class="action-buttons">
+                    <el-button type="success" icon="el-icon-thumb" @click="handleLike">点赞</el-button>
+                    <el-button type="info" icon="el-icon-chat-line-square" @click="handleComment">评论</el-button>
+                </div>
                 <div class="markdown-body" v-html="compiledMarkdown"></div>
+
             </div>
             <div class="blog-content empty" v-else>
                 <el-empty description="请选择要查看的博客"></el-empty>
@@ -156,7 +161,6 @@ export default {
                 if (response.code === 200) {
                     this.originData= response.data
                     this.TreeData = this.handleTreeData(response.data)
-                    console.log(this.TreeData)
                     this.getCategories()
                     return response.data
                 } else {
@@ -256,28 +260,7 @@ export default {
         },
 
         handleClose() {
-            if (!this.isEditing) {
-                if (this.blogForm.content.length > 10) {
-                    this.$confirm('确认关闭？未保存的内容将会保存到草稿箱', '提示', {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }).then(() => {
-
-                        this.resetForm();
-                        this.dialogVisible = false; // 关闭弹出框
-                    }).catch(() => {
-                        // 取消关闭时不做任何操作
-                    })
-                } else {
-                    this.resetForm();
-                    this.dialogVisible = false; // 关闭弹出框
-                }
-            } else {
-                this.resetForm();
-                this.dialogVisible = false; // 关闭弹出框
-                this.isEditing = false;
-            }
+            this.dialogVisible = false
         },
 
         // 处理修改按钮点击
@@ -357,6 +340,14 @@ export default {
             } else {
                 this.blogForm.categoryId = null
             }
+        },
+
+        handleLike() {
+            console.log(this.currentBlog)
+        },
+
+        handleComment() {
+            console.log(this.currentBlog)
         },
     }
 }
@@ -466,5 +457,11 @@ export default {
 
 .mavon-editor {
     height: 600px;
+}
+
+.action-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
 }
 </style>
