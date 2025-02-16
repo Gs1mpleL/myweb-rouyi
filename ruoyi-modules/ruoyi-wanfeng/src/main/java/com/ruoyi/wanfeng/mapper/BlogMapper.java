@@ -1,6 +1,5 @@
 package com.ruoyi.wanfeng.mapper;
 
-import com.ruoyi.wanfeng.domain.Blog;
 import com.ruoyi.wanfeng.domain.BlogCategory;
 import com.ruoyi.wanfeng.vo.BlogVo;
 import org.apache.ibatis.annotations.Mapper;
@@ -15,5 +14,5 @@ public interface BlogMapper {
     void deleteBlogById(Long id);
     void addCategory(BlogCategory blogCategory);
     Integer countByTitle(String title);
-    Blog selectById(Long blogId);
+    BlogVo selectById(Long blogId);
 }

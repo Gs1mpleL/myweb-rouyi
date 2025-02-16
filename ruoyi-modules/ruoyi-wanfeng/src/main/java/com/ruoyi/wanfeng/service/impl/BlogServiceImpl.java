@@ -2,7 +2,6 @@ package com.ruoyi.wanfeng.service.impl;
 
 import com.ruoyi.common.core.context.SecurityContextHolder;
 import com.ruoyi.common.core.exception.GlobalException;
-import com.ruoyi.wanfeng.domain.Blog;
 import com.ruoyi.wanfeng.domain.BlogCategory;
 import com.ruoyi.wanfeng.mapper.BlogMapper;
 import com.ruoyi.wanfeng.service.BlogService;
@@ -68,7 +67,7 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     public void del(Long blogId) {
-        Blog blog = blogMapper.selectById(blogId);
+        BlogVo blog = blogMapper.selectById(blogId);
         if (!Objects.equals(blog.getUserId(), SecurityContextHolder.getUserId())){
             throw new GlobalException("您没有权限删除该博客。");
         }
@@ -76,7 +75,7 @@ public class BlogServiceImpl implements BlogService {
     }
 
     @Override
-    public Blog selectById(Long blogId) {
+    public BlogVo selectById(Long blogId) {
         return blogMapper.selectById(blogId);
     }
 }

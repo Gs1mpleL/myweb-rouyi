@@ -170,16 +170,24 @@
             -- 左连接用户表，获取博客所属用户的昵称
                  LEFT JOIN sys_user lu ON lb.user_id = lu.user_id
     </select>
-    <select id="selectById" resultMap="Blog" parameterType="java.lang.Long">
+    <select id="selectById" resultMap="BlogResult" parameterType="java.lang.Long">
         SELECT
             lb.id,
-            lb.user_id,
             lb.title,
-            lb.category_id,
-            lb.content,
+            lb.user_id,
+            -- 使用 COALESCE 函数，如果 lb.category_id 为空则返回 lbc.id
+            COALESCE(lb.category_id, lbc.id) as category_id,
             lb.create_time,
-            lb.update_time
+            lb.update_time,
+            lbc.category_name,
+            lb.content,
+            lbc.id,
+            lu.nick_name
         FROM learn_blog lb
+                 -- 右连接博客分类表，关联博客分类信息
+                 RIGHT JOIN learn_blog_category lbc ON lb.category_id = lbc.id  AND lb.del_flag = 0
+            -- 左连接用户表，获取博客所属用户的昵称
+                 LEFT JOIN sys_user lu ON lb.user_id = lu.user_id
         WHERE lb.id = #{id}
     </select>
     <select id="countByTitle" resultType="java.lang.Integer">

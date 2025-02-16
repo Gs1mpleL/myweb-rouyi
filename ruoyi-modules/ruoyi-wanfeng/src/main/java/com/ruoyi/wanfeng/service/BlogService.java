@@ -1,6 +1,5 @@
 package com.ruoyi.wanfeng.service;
 
-import com.ruoyi.wanfeng.domain.Blog;
 import com.ruoyi.wanfeng.vo.BlogVo;
 
 import java.util.List;
@@ -17,5 +16,5 @@ public interface BlogService {
 
     void del(Long blogId);
 
-    Blog selectById(Long blogId);
+    BlogVo selectById(Long blogId);
 }

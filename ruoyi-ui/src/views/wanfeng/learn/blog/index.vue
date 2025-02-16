@@ -183,12 +183,7 @@ export default {
                         blogId: blog.blogId,
                         label: blog.title,
                         categoryName: blog.categoryName,
-                        categoryId: blog.categoryId,
-                        author: blog.author,
-                        createTime: blog.createTime,
-                        updateTime: blog.updateTime,
-                        content: blog.content,
-                        title: blog.title
+                        categoryId: blog.categoryId,    
                     }))
                 };
             });
@@ -198,9 +193,7 @@ export default {
         handleNodeClick(data) {
             if (!data.children) {
                 getOne(data.blogId).then(response=>{
-                    data.userId=response.data.userId
-                    data.content = response.data.content
-                    this.currentBlog = data
+                    this.currentBlog = response.data
                 })
             }
         },
@@ -216,6 +209,7 @@ export default {
         handleSave() {
             this.$refs.blogForm.validate(valid => {
                 if (valid) {
+                    console.log(this.blogForm)
                     const blogData = {
                         title: this.blogForm.title,
                         content: this.blogForm.content,
@@ -223,11 +217,9 @@ export default {
                         categoryName:this.blogForm.categoryName,
                         userId:this.blogForm.userId
                     };
-
                     if (this.isEditing) {
                         blogData.blogId = this.blogForm.blogId; // 传递博客ID
                     }
-
                     const savePromise = this.isEditing ? updateBlog(blogData) : addBlog(blogData);
                     savePromise.then(response => {
                         this.$message.success('保存成功');
@@ -235,12 +227,9 @@ export default {
                         this.getList().then(() => {
                             // 查找对应的文章
                             const updatedBlog = this.findBlogInList(blogData.title, blogData.categoryName);
-                            console.log(updateBlog)
                             if (updatedBlog) {
                                 getOne(updatedBlog.blogId).then(response=>{
-                                    updatedBlog.content = response.data.content
-                                    updatedBlog.userId = response.data.userId
-                                    this.currentBlog = updatedBlog
+                                    this.currentBlog = response.data
                                 })
                             }
                         });
@@ -252,30 +241,21 @@ export default {
                 }
             });
         },
-
         findBlogInList(title, categoryName) {
             return this.TreeData.flatMap(category => category.children || []).find(blog =>
                 blog.title === title && blog.categoryName === categoryName
             );
         },
-
         handleClose() {
             this.dialogVisible = false
         },
-
         // 处理修改按钮点击
         handleEdit() {
             this.isEditing = true;
             this.dialogTitle = "编辑博客";
-            this.blogForm.blogId = this.currentBlog.blogId;
-            this.blogForm.title = this.currentBlog.title;
-            this.blogForm.categoryName = this.currentBlog.categoryName;
-            this.blogForm.content = this.currentBlog.content;
-            this.blogForm.categoryId = this.currentBlog.categoryId;
-            this.blogForm.userId=this.currentBlog.userId;
+            this.blogForm = this.currentBlog;
             this.dialogVisible = true;
         },
-
         // 处理删除按钮点击
         handleDelete() {
             this.$confirm('确认删除该博客吗？', '警告', {
@@ -290,18 +270,11 @@ export default {
                 })
             }).catch(() => { })
         },
-
         // 重置表单
         resetForm() {
             this.blogForm = {
-                blogId: null,
-                title: '',
-                categoryName: '',
-                content: '',
-                categoryId: null
             };
         },
-
         // 获取所有现有分类,用于在表单中选择不同的分类
         getCategories() {
             const categories = [];
@@ -331,7 +304,6 @@ export default {
 
             this.existingCategories = categories;
         },
-
         // 处理分类选择框变化事件
         handleCategoryChange(newCategoryName) {
             const selectedCategory = this.existingCategories.find(category => category.name === newCategoryName)
@@ -341,7 +313,6 @@ export default {
                 this.blogForm.categoryId = null
             }
         },
-
         handleLike() {
             console.log(this.currentBlog)
         },

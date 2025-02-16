@@ -1,7 +1,6 @@
 package com.ruoyi.wanfeng.controller;
 
 import com.ruoyi.common.core.domain.R;
-import com.ruoyi.wanfeng.domain.Blog;
 import com.ruoyi.wanfeng.service.BlogService;
 import com.ruoyi.wanfeng.vo.BlogVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +40,7 @@ public class BlogController {
 
     @GetMapping("/{blogId}")
     public R<?> selectById(@PathVariable Long blogId) {
-        Blog blog = blogService.selectById(blogId);
+        BlogVo blog = blogService.selectById(blogId);
         return R.ok(blog);
     }
 }
