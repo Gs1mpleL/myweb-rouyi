@@ -16,6 +16,7 @@
     </resultMap>
     <resultMap type="Blog" id="Blog">
         <id property="blogId" column="id"/>
+        <id property="userId" column="user_id"/>
         <result property="title" column="title"/>
         <result property="categoryId" column="category_id"/>
         <result property="content" column="content"/>
@@ -111,7 +112,7 @@
         SET
             del_flag = '1'
         WHERE
-            blog_id = #{blogId}
+            id = #{blogId}
     </update>
 
     <!-- 根据博客 ID 查询单个博客 -->
@@ -165,13 +166,14 @@
             lu.nick_name
         FROM learn_blog lb
                  -- 右连接博客分类表，关联博客分类信息
-                 RIGHT JOIN learn_blog_category lbc ON lb.category_id = lbc.id AND lb.user_id = #{userId} AND lb.del_flag = 0
+                 RIGHT JOIN learn_blog_category lbc ON lb.category_id = lbc.id  AND lb.del_flag = 0
             -- 左连接用户表，获取博客所属用户的昵称
                  LEFT JOIN sys_user lu ON lb.user_id = lu.user_id
     </select>
     <select id="selectById" resultMap="Blog" parameterType="java.lang.Long">
         SELECT
             lb.id,
+            lb.user_id,
             lb.title,
             lb.category_id,
             lb.content,

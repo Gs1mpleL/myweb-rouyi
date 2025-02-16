@@ -194,6 +194,7 @@ export default {
         handleNodeClick(data) {
             if (!data.children) {
                 getOne(data.blogId).then(response=>{
+                    data.userId=response.data.userId
                     data.content = response.data.content
                     this.currentBlog = data
                 })
@@ -215,7 +216,8 @@ export default {
                         title: this.blogForm.title,
                         content: this.blogForm.content,
                         categoryId: this.blogForm.categoryId, // 传递分类ID
-                        categoryName:this.blogForm.categoryName
+                        categoryName:this.blogForm.categoryName,
+                        userId:this.blogForm.userId
                     };
 
                     if (this.isEditing) {
@@ -233,7 +235,7 @@ export default {
                             if (updatedBlog) {
                                 getOne(updatedBlog.blogId).then(response=>{
                                     updatedBlog.content = response.data.content
-                                    
+                                    updatedBlog.userId = response.data.userId
                                     this.currentBlog = updatedBlog
                                 })
                             }
@@ -287,6 +289,7 @@ export default {
             this.blogForm.categoryName = this.currentBlog.categoryName;
             this.blogForm.content = this.currentBlog.content;
             this.blogForm.categoryId = this.currentBlog.categoryId;
+            this.blogForm.userId=this.currentBlog.userId;
             this.dialogVisible = true;
         },
 

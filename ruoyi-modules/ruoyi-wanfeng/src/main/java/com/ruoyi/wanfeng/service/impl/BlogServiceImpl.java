@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class BlogServiceImpl implements BlogService {
@@ -20,7 +21,7 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     public List<BlogVo> listByUserId() {
-        return blogMapper.listByUserId(SecurityContextHolder.getUserId());
+        return blogMapper.listByUserId();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -44,10 +45,10 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     public void update(BlogVo blogVo) {
-        // 检查标题是否重复
-        if (isTitleDuplicate(blogVo.getTitle())) {
-            throw new GlobalException("博客标题已存在，请使用其他标题。");
+        if (!Objects.equals(blogVo.getUserId(), SecurityContextHolder.getUserId())){
+            throw new GlobalException("您没有权限修改该博客。");
         }
+
         // 需要新建一个博客分类
         if (blogVo.getCategoryId() == null){
             BlogCategory blogCategory = new BlogCategory();
@@ -67,6 +68,10 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     public void del(Long blogId) {
+        Blog blog = blogMapper.selectById(blogId);
+        if (!Objects.equals(blog.getUserId(), SecurityContextHolder.getUserId())){
+            throw new GlobalException("您没有权限删除该博客。");
+        }
         blogMapper.deleteBlogById(blogId);
     }
 

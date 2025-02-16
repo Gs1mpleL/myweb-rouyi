@@ -9,7 +9,7 @@ import java.util.List;
 
 @Mapper
 public interface BlogMapper {
-    List<BlogVo> listByUserId(Long userId);
+    List<BlogVo> listByUserId();
     void add(BlogVo blogVo);
     void update(BlogVo blogVo);
     void deleteBlogById(Long id);
