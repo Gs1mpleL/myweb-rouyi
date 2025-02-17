@@ -25,7 +25,7 @@ spring:
           - application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
   kafka:
     # Kafka 服务器地址，这里需要使用宿主机能够访问到的地址
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
     producer:
       # 生产者键的序列化器
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
