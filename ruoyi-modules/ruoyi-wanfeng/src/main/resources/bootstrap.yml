@@ -23,3 +23,29 @@ spring:
         # 共享配置
         shared-configs:
           - application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
+  kafka:
+    # Kafka 服务器地址，这里需要使用宿主机能够访问到的地址
+    bootstrap-servers: localhost:9092
+    producer:
+      # 生产者键的序列化器
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # 生产者值的序列化器
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # 生产者确认机制，all 表示所有副本都确认才认为消息发送成功
+      acks: all
+    consumer:
+      # 消费者组 ID
+      group-id: my-group
+      # 消费者自动提交偏移量
+      enable-auto-commit: true
+      # 消费者自动提交偏移量的间隔时间
+      auto-commit-interval: 100ms
+      # 消费者键的反序列化器
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # 消费者值的反序列化器
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # 当没有初始偏移量或当前偏移量无效时的处理策略
+      auto-offset-reset: earliest
+    listener:
+      # 监听器类型，批量消费
+      type: batch
