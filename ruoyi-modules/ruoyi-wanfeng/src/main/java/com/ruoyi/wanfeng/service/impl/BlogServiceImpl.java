@@ -23,14 +23,16 @@ import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
 public class BlogServiceImpl implements BlogService {
-    public static final String LIKE_RECORD_CACHE = CacheConstants.WANFENG_BLOG_KEY + ":likeRecord:";
-    public static final String LIKE_COUNT_CACHE = CacheConstants.WANFENG_BLOG_KEY + ":likeRecord:";
+    public static final String LIKE_RECORD_CACHE = CacheConstants.WANFENG_BLOG_KEY + ":likeRecord";
+    public static final String LIKE_COUNT_CACHE = CacheConstants.WANFENG_BLOG_KEY + ":likeRecord";
     public static final String TOPIC_BLOG_LIKE = "blog-like";
     @Autowired
     private BlogMapper blogMapper;
@@ -100,24 +102,29 @@ public class BlogServiceImpl implements BlogService {
     @Override
     public BlogVo selectBlogById(Long blogId) {
         BlogVo blogVo = blogMapper.selectById(blogId);
-        Long likeCountCache = (Long) blogLikeLocalCache.getIfPresent(LIKE_COUNT_CACHE + ":" + blogVo.getBlogId());
+        Long likeCountCache = redisService.getCacheObject(LIKE_COUNT_CACHE + ":" + blogVo.getBlogId());
         if (likeCountCache == null){
-            blogLikeLocalCache.put(LIKE_COUNT_CACHE + ":" + blogVo.getBlogId(), blogVo.getLikeCount());
+            redisService.setCacheObject(LIKE_COUNT_CACHE + ":" + blogVo.getBlogId(), blogVo.getLikeCount(),2L, TimeUnit.DAYS);
         }else {
             blogVo.setLikeCount(likeCountCache);
-            // 缓存数据过多，写回数据库
-            if (likeCountCache - blogVo.getLikeCount() > 0){
-                blogVo.setLikeCount(likeCountCache);
-                blogMapper.update(blogVo);
-            }
+            // 缓存数据过多，写回数据库(缓存回写交给定时任务) 写回后删除缓存，对于不再是热点的id，缓存2天，每天写回
+//            if (likeCountCache - blogVo.getLikeCount() > 100){
+//                blogVo.setLikeCount(likeCountCache);
+//                blogMapper.update(blogVo);
+//            }
+            // dev 直接写回
+            blogMapper.update(blogVo);
         }
         Long userId = SecurityContextHolder.getUserId();
-        boolean like = false;
-        BlogLikes latestLikeRecord = blogMapper.getLatestLikeRecord(new BlogLikes(userId, blogId));
-        if (latestLikeRecord!=null &&(Objects.equals(latestLikeRecord.getType(), 1))){
-            like = true;
+        // 用户是否点赞
+        Long likeTypeCache = redisService.getCacheObject(LIKE_RECORD_CACHE + ":" + blogId + ":" + userId);
+        if (likeTypeCache==null){
+            BlogLikes latestLikeRecord = blogMapper.getLatestLikeRecord(new BlogLikes(userId, blogId));
+            blogVo.setLike(latestLikeRecord.getType()==1);
+            redisService.setCacheObject(LIKE_RECORD_CACHE + ":" + blogId + ":" + userId, latestLikeRecord.getType());
+        }else {
+            blogVo.setLike(likeTypeCache==1);
         }
-        blogVo.setLike(like);
         return blogVo;
     }
 
@@ -180,25 +187,43 @@ public class BlogServiceImpl implements BlogService {
         }
         /******************************************************去重结束********************************************************/
 
-        /*****************************************************插入数据库********************************************************/
+        /*****************************************************插入数据库(//tod 事务处理)********************************************************/
         // 存入数据库
         blogMapper.insertLike(blogLikes);
         // 记录缓存
         blogLikeLocalCache.put(LIKE_RECORD_CACHE + ":" + blogLikes.getUserId()+":"+ blogLikes.getBlogId(), blogLikes.getType());
         redisService.setCacheObject(LIKE_RECORD_CACHE + ":" + blogLikes.getUserId()+":"+ blogLikes.getBlogId(), blogLikes.getType());
-        Long likeLocalCacheCount = (Long) blogLikeLocalCache.getIfPresent(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId());
-        if (likeLocalCacheCount == null){
-            blogLikeLocalCache.put(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), blogMapper.selectById(blogLikes.getBlogId()).getLikeCount() + blogLikes.getType() == 1 ? 1L : -1L);
-        }else {
-            blogLikeLocalCache.put(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), likeLocalCacheCount + blogLikes.getType() == 1 ?1L : -1L);
-        }
+        // 缓存点赞数+1或-1 不适合本地缓存使用
         // 文章点赞数缓存更新
-        if (!redisService.hasKey(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId())){
-            redisService.setCacheObject(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), blogMapper.selectById(blogLikes.getBlogId()).getLikeCount() + blogLikes.getType() == 1 ? 1L : -1L);
-        }
-        else {
-            redisService.increment(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), blogLikes.getType() == 1 ? 1L : -1L);
-        }
+        // TODO：Redis集群情况这里需要LUA脚本实现
+//        if (!redisService.hasKey(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId())){
+//            redisService.setCacheObject(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), blogMapper.selectById(blogLikes.getBlogId()).getLikeCount() + (blogLikes.getType() == 1 ? 1L : -1L));
+//        }
+//        else {
+//            redisService.increment(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), blogLikes.getType() == 1 ? 1L : -1L);
+//        }
+        // 定义 Lua 脚本
+        String luaScript = "local cacheKey = KEYS[1]\n" +
+                "local blogId = KEYS[2]\n" +
+                "local type = tonumber(ARGV[1])\n" +
+                "local likeCountFromDb = tonumber(ARGV[2])\n" +
+                "if redis.call('EXISTS', cacheKey) == 0 then\n" +
+                "    local increment = type == 1 and 1 or -1\n" +
+                "    redis.call('SET', cacheKey, likeCountFromDb + increment)\n" +
+                "else\n" +
+                "    local increment = type == 1 and 1 or -1\n" +
+                "    redis.call('INCRBY', cacheKey, increment)\n" +
+                "end\n" +
+                "return 1";
+        // 准备参数
+        String cacheKey = LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId();
+        String blogId = String.valueOf(blogLikes.getBlogId());
+        String type = String.valueOf(blogLikes.getType());
+        long likeCountFromDb = blogMapper.selectById(blogLikes.getBlogId()).getLikeCount();
+        List<String> keys = Arrays.asList(cacheKey, blogId);
+        List<String> args = Arrays.asList(type, String.valueOf(likeCountFromDb));
+        // 执行 Lua 脚本
+        redisService.executeLuaScript(luaScript, Long.class,keys, args);
     }
 
 
