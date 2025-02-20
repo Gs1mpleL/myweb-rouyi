@@ -5,6 +5,7 @@ import org.springframework.data.redis.core.BoundSetOperations;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -12,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * spring redis 工具类
- * 
+ *
  * @author ruoyi
  **/
 @SuppressWarnings(value = { "unchecked", "rawtypes" })
@@ -21,7 +22,21 @@ public class RedisService
 {
     @Autowired
     public RedisTemplate redisTemplate;
-
+    /**
+     * 执行 Lua 脚本
+     * @param script Lua 脚本内容
+     * @param resultType 返回结果类型
+     * @param keys 键列表
+     * @param args 参数列表
+     * @param <T> 泛型类型
+     * @return 执行结果
+     */
+    public <T> T executeLuaScript(String script, Class<T> resultType, List<String> keys, List<String> args) {
+        DefaultRedisScript<T> redisScript = new DefaultRedisScript<>();
+        redisScript.setScriptText(script);
+        redisScript.setResultType(resultType);
+        return (T) redisTemplate.execute(redisScript, keys, args);
+    }
     /**
      * 缓存基本的对象，Integer、String、实体类等
      *
