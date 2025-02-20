@@ -24,6 +24,7 @@ import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -203,27 +204,35 @@ public class BlogServiceImpl implements BlogService {
 //            redisService.increment(LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId(), blogLikes.getType() == 1 ? 1L : -1L);
 //        }
         // 定义 Lua 脚本
+        // 定义修改后的 Lua 脚本
         String luaScript = "local cacheKey = KEYS[1]\n" +
                 "local blogId = KEYS[2]\n" +
                 "local type = tonumber(ARGV[1])\n" +
                 "local likeCountFromDb = tonumber(ARGV[2])\n" +
                 "if redis.call('EXISTS', cacheKey) == 0 then\n" +
-                "    local increment = type == 1 and 1 or -1\n" +
-                "    redis.call('SET', cacheKey, likeCountFromDb + increment)\n" +
+                "    return 0\n" +
                 "else\n" +
                 "    local increment = type == 1 and 1 or -1\n" +
                 "    redis.call('INCRBY', cacheKey, increment)\n" +
-                "end\n" +
-                "return 1";
+                "    return 1\n" +
+                "end";
         // 准备参数
         String cacheKey = LIKE_COUNT_CACHE + ":" + blogLikes.getBlogId();
         String blogId = String.valueOf(blogLikes.getBlogId());
         String type = String.valueOf(blogLikes.getType());
-        long likeCountFromDb = blogMapper.selectById(blogLikes.getBlogId()).getLikeCount();
+
         List<String> keys = Arrays.asList(cacheKey, blogId);
-        List<String> args = Arrays.asList(type, String.valueOf(likeCountFromDb));
+        List<String> args = Collections.singletonList(type);
         // 执行 Lua 脚本
-        redisService.executeLuaScript(luaScript, Long.class,keys, args);
+        Long l = redisService.executeLuaScript(luaScript, Long.class, keys, args);
+        if (l == 0L){
+            // 没有点开文章就点赞了，非法操作，在事务中应该直接回滚数据库的操作
+            BlogVo blogVo = blogMapper.selectById(blogLikes.getBlogId());
+            Long likeCount = blogVo.getLikeCount();
+            blogVo.setLikeCount((long) (likeCount + blogLikes.getType()==1?1:-1));
+            blogMapper.update(blogVo);
+            throw new GlobalException("非法操作");
+        }
     }
 
 
