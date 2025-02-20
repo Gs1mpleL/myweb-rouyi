@@ -38,20 +38,20 @@
 docker部署的kafka集群在docker环境内部没问题，但是在dev环境下的springboot项目连接后，发现连接不上，报错的ip为docker内部的类型kafka1，kafka2等别名，这个问题只在微服务不在docker容器内部署时出现，所以在hosts配置127.0.0,1 kafka1 kafka2 kafka3
 
 ## 高并发点赞处理
+### 需求
+1. 异步处理点赞记录的保存
+2. 缓存用户是否点赞过该文章和文章的点赞数
 ### 数据表
 - 点赞记录表
-userId、blogId、Timestamp   在userId和blogId上建立联合索引
+userId、blogId、type、Timestamp  这里应该再设置一个id，然后把blogId、userId做联合索引加速查询
 - 点赞数集成到了blog信息表中
-### 缓存
-- 点赞数
-CONSTANT:blogId -> count (set)
-- 点赞记录
-  CONSTANT:blogId -> member(messageID)-score(likeTimestamp) (ZSet)
-为了维持用户点赞列表的长度（不至于无限扩张），需要在每一次加入新的点赞记录的时候，按照固定长度裁剪用户的点赞记录缓存。该设计也就代表用户的点赞记录在缓存中是有限制长度的，超过该长度的数据请求需要回源DB查询
-### 流程
-1. 点赞接口： blogId，userId
-3. 在key为视频id的Redis Set数据结构下，添加userId
-4. 在key为 xxx的什么数据结构下 incr
-5. 给mq发消息
-6. mq异步落库
-7. 每10分钟检查一次点赞数量，进行落库
+### 点赞处理
+1. 用户点击点赞按钮
+2. 将请求发送给kafka，发送成功后就返回给用户点赞成功
+3. 本地缓存去重、redis缓存去重、mysql去重，防止用户多次点击
+4. 数据插入mysql，缓存点赞状态，更新点赞数（多步操作应使用lua完成，避免并发问题）
+### 点赞数处理
+最新的点赞数是存在redis中的，从MySQL中获取的都是旧数据
+每隔一定时间，将redis中的点赞数回写到mysql
+### 总结
+1. 在具体缓存逻辑上可能还有缺陷，比如某一步失败后改怎么处理、Redis是集群部署的并发问题等
