@@ -106,7 +106,7 @@
             <if test="updateTime == null">
                 update_time = NOW(),
             </if>
-            <if test="likeCount == null">
+            <if test="likeCount != null">
                 like_count = #{likeCount},
             </if>
         </set>

@@ -13,7 +13,7 @@ public class BlogVo extends BaseEntity {
     private String content;
     private String categoryName;
     private String author;
-    private Long likeCount;
+    private int likeCount;
     private Long commentCount;
     private boolean isLike;
 }
