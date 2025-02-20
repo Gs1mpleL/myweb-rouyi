@@ -13,6 +13,8 @@
         <result property="updateTime" column="update_time"/>
         <result property="author" column="nick_name"/>
         <result property="categoryName" column="category_name"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
     </resultMap>
     <resultMap type="Blog" id="Blog">
         <id property="blogId" column="id"/>
@@ -32,7 +34,9 @@
         user_id,
         del_flag,
         create_time,
-        update_time
+        update_time,
+        like_count,
+        comment_count
         ) VALUES (
         #{title},
         #{content},
@@ -52,7 +56,8 @@
         </if>
         <if test="updateTime == null">
             NOW()
-        </if>
+        </if>,
+                    0,0
         )
     </insert>
     <insert id="addCategory" parameterType="BlogCategory"  useGeneratedKeys="true" keyProperty="id">
@@ -101,6 +106,9 @@
             <if test="updateTime == null">
                 update_time = NOW(),
             </if>
+            <if test="likeCount == null">
+                like_count = #{likeCount},
+            </if>
         </set>
         WHERE
         id = #{blogId}
@@ -115,26 +123,6 @@
             id = #{blogId}
     </update>
 
-    <!-- 根据博客 ID 查询单个博客 -->
-    <select id="selectBlogById" resultMap="BlogResult" parameterType="java.lang.Long">
-        SELECT
-            lb.blog_id,
-            lb.title,
-            lb.content,
-            lb.category_id,
-            lb.author,
-            lb.del_flag,
-            lb.create_time,
-            lb.update_time,
-            lbc.category_name
-        FROM
-            learn_blog lb
-                LEFT JOIN
-            learn_blog_category lbc ON lb.category_id = lbc.category_id
-        WHERE
-            lb.blog_id = #{blogId}
-          AND lb.del_flag = '0'
-    </select>
 <!--    错误示范，WHERE写在右连接外边，会导致最后为null的被剔除-->
 <!--    <select id="listByUserId" resultMap="BlogResult">-->
 <!--        SELECT-->
@@ -157,6 +145,8 @@
             lb.id,
             lb.title,
             lb.user_id,
+            lb.like_count,
+            lb.comment_count,
             -- 使用 COALESCE 函数，如果 lb.category_id 为空则返回 lbc.id
             COALESCE(lb.category_id, lbc.id) as category_id,
             lb.create_time,
@@ -182,6 +172,8 @@
             lbc.category_name,
             lb.content,
             lbc.id,
+            lb.like_count,
+            lb.comment_count,
             lu.nick_name
         FROM learn_blog lb
                  -- 右连接博客分类表，关联博客分类信息
@@ -192,6 +184,43 @@
     </select>
     <select id="countByTitle" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM learn_blog WHERE title = #{title}
+    </select>
+
+    <insert id="insertLike" parameterType="com.ruoyi.wanfeng.domain.BlogLikes">
+        INSERT INTO learn_blog_likes (user_id, blog_id,type,like_time)
+        VALUES (#{userId}, #{blogId},#{type} ,#{likeTime})
+    </insert>
+
+
+    <select id="getLikeType" resultType="java.lang.Integer">
+        SELECT type
+        FROM learn_blog_likes
+        WHERE user_id = #{userId} AND blog_id = #{blogId}
+    </select>
+
+
+    <insert id="insertComment" parameterType="com.ruoyi.wanfeng.domain.BlogComments">
+        INSERT INTO learn_blog_comments (user_id, blog_id, comment_content, comment_time)
+        VALUES (#{userId}, #{blogId}, #{commentContent}, #{commentTime})
+    </insert>
+
+    <delete id="deleteComment" parameterType="com.ruoyi.wanfeng.domain.BlogComments">
+        DELETE FROM learn_blog_comments
+        WHERE user_id = #{userId} AND blog_id = #{blogId} AND comment_content = #{commentContent}
+    </delete>
+
+    <select id="selectCommentCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM learn_blog_comments
+        WHERE user_id = #{userId} AND blog_id = #{blogId}
+    </select>
+
+    <select id="getLatestLikeRecord" resultType="com.ruoyi.wanfeng.domain.BlogLikes">
+        SELECT *
+        FROM learn_blog_likes
+        WHERE user_id = #{userId} AND blog_id = #{blogId}
+        ORDER BY like_time DESC
+        LIMIT 1
     </select>
 
 </mapper>

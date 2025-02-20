@@ -41,3 +41,13 @@ export function getOne(blogId) {
     method: 'get'
   })
 }
+
+
+// 点赞或取消点赞
+export function like(BlogLikes) {
+  return request({
+    url: '/wanfeng/learn/blog/like',
+    method: 'post',
+    data:BlogLikes
+  })
+}

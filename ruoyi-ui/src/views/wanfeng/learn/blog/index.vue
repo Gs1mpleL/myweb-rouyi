@@ -39,7 +39,12 @@
                     </div>
                 </div>
                 <div class="action-buttons">
-                    <el-button type="success" icon="el-icon-thumb" @click="handleLike">点赞</el-button>
+                    <el-button 
+                        :type="currentBlog.like ? 'success' : 'default'" 
+                        icon="el-icon-thumb" 
+                        @click="handleLike">
+                        {{ currentBlog.like ? '已点赞' : '点赞' }} ({{ currentBlog.likeCount }})
+                    </el-button>
                     <el-button type="info" icon="el-icon-chat-line-square" @click="handleComment">评论</el-button>
                 </div>
                 <div class="markdown-body" v-html="compiledMarkdown"></div>
@@ -78,7 +83,7 @@
 </template>
 
 <script>
-import { listBlog, addBlog, updateBlog, delBlog, getOne } from '@/api/wanfeng/learn/blog'
+import { listBlog, addBlog, updateBlog, delBlog, getOne,like } from '@/api/wanfeng/learn/blog'
 import { mavonEditor } from 'mavon-editor'
 import MarkdownIt from 'markdown-it/dist/markdown-it.js'
 import 'mavon-editor/dist/css/index.css'
@@ -314,7 +319,22 @@ export default {
             }
         },
         handleLike() {
-            console.log(this.currentBlog)
+            const blogLikes = {
+                blogId: this.currentBlog.blogId,
+                userId: this.currentBlog.userId,
+                type: this.currentBlog.like ? 2 : 1
+            };
+            like(blogLikes).then(response => {
+                if (response.code === 200) {
+                    this.currentBlog.like = !this.currentBlog.like;
+                    this.currentBlog.likeCount += this.currentBlog.like ? 1 : -1;
+                    this.$message.success(this.currentBlog.like ? '已点赞' : '取消点赞');
+                } else {
+                    this.$message.error('点赞失败');
+                }
+            }).catch(error => {
+                this.$message.error('点赞出错：' + error.message);
+            });
         },
 
         handleComment() {

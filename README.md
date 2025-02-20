@@ -2,13 +2,13 @@
 1. 爬虫服务
 2. 天气服务
 3. 博客服务
+4. Kafka搭建
 
 # 待完成功能
-1. Kafka搭建 
-2. 点赞评论异步处理
-3. netty聊天室
-4. ES搭建
-5. 分布式日志收集
+- 点赞评论异步处理
+- netty聊天室
+- ES搭建
+- 分布式日志收集
 
 # 学习记录
 ## Kafka
@@ -35,4 +35,23 @@
    作用：代理是 Kafka 集群中的一个节点，负责存储和处理消息。一个 Kafka 集群可以由多个代理组成，每个代理都是一个独立的服务器。
    工作方式：代理接收生产者发送的消息，并将其存储在本地磁盘上的分区中。同时，代理还会处理消费者的拉取请求，将消息发送给消费者。
 ### 集群部署问题
-docker部署的kafka集群在docker环境内部没问题，但是在dev环境下的springboot项目连接后，发现连接不上，报错的ip为docker内部的类型kafka1，kafka2等别名，这个问题只在微服务不在docker容器内部署时出现，所以最简单在dev环境下只开一台kafka,并在hosts配置127.0.0,1 kafka1
+docker部署的kafka集群在docker环境内部没问题，但是在dev环境下的springboot项目连接后，发现连接不上，报错的ip为docker内部的类型kafka1，kafka2等别名，这个问题只在微服务不在docker容器内部署时出现，所以在hosts配置127.0.0,1 kafka1 kafka2 kafka3
+
+## 高并发点赞处理
+### 数据表
+- 点赞记录表
+userId、blogId、Timestamp   在userId和blogId上建立联合索引
+- 点赞数集成到了blog信息表中
+### 缓存
+- 点赞数
+CONSTANT:blogId -> count (set)
+- 点赞记录
+  CONSTANT:blogId -> member(messageID)-score(likeTimestamp) (ZSet)
+为了维持用户点赞列表的长度（不至于无限扩张），需要在每一次加入新的点赞记录的时候，按照固定长度裁剪用户的点赞记录缓存。该设计也就代表用户的点赞记录在缓存中是有限制长度的，超过该长度的数据请求需要回源DB查询
+### 流程
+1. 点赞接口： blogId，userId
+3. 在key为视频id的Redis Set数据结构下，添加userId
+4. 在key为 xxx的什么数据结构下 incr
+5. 给mq发消息
+6. mq异步落库
+7. 每10分钟检查一次点赞数量，进行落库

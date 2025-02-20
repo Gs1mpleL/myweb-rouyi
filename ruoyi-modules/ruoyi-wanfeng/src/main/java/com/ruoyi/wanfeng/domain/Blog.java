@@ -12,4 +12,6 @@ public class Blog extends BaseEntity {
     private String title;
     private String content;
     private String delFlag;
+    private String likeCount;
+    private String commentCount;
 }

@@ -41,7 +41,10 @@ public class CacheConstants
      * 参数管理 cache key
      */
     public static final String SYS_CONFIG_KEY = "sys_config:";
-
+    /**
+     * blog cache key
+     */
+    public static final String WANFENG_BLOG_KEY = "wanfeng:blog";
     /**
      * 字典管理 cache key
      */

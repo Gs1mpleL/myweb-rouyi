@@ -1,17 +1,14 @@
 package com.ruoyi.common.redis.service;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.BoundSetOperations;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * spring redis 工具类
@@ -48,7 +45,14 @@ public class RedisService
     {
         redisTemplate.opsForValue().set(key, value, timeout, timeUnit);
     }
-
+    public <T> Long addToSet(final String key, final T... values) {
+        BoundSetOperations<String, T> setOperations = redisTemplate.boundSetOps(key);
+        return setOperations.add(values);
+    }
+    public <T> Long removeFromSet(final String key, final T... values) {
+        BoundSetOperations<String, T> setOperations = redisTemplate.boundSetOps(key);
+        return setOperations.remove(values);
+    }
     /**
      * 设置有效时间
      *
@@ -264,5 +268,10 @@ public class RedisService
     public Collection<String> keys(final String pattern)
     {
         return redisTemplate.keys(pattern);
+    }
+
+    public void increment(String key, Long delta) {
+        ValueOperations<String, Integer> valueOperations = redisTemplate.opsForValue();
+        valueOperations.increment(key, delta);
     }
 }

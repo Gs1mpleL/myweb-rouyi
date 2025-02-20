@@ -42,7 +42,20 @@ if [ $? -ne 0 ]; then
 fi
 echo "Nginx 已启动，等待 3 秒..."
 sleep 3
+# 启动zk
+docker-compose up -d zookeeper1 zookeeper2 zookeeper3
+if [ $? -ne 0 ]; then
+    echo "其他服务启动失败。"
+    exit 1
+fi
+echo "zookeeper启动成功"
 
+docker-compose up -d kafka1 kafka2 fafka3
+if [ $? -ne 0 ]; then
+    echo "其他服务启动失败。"
+    exit 1
+fi
+echo "kafka启动成功"
 # 启动其他所有服务
 docker-compose up -d ruoyi-auth ruoyi-modules-system ruoyi-modules-wanfeng ruoyi-modules-gen ruoyi-modules-job ruoyi-modules-file ruoyi-visual-monitor sentinel-dashboard
 if [ $? -ne 0 ]; then
